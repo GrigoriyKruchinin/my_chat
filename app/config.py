@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     ALGORITHM: str
 
+    TG_TOKEN: str
+
     class ConfigDict:
         env_file = ".env"
 
