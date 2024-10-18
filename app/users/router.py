@@ -1,5 +1,5 @@
 from typing import List
-
+import secrets
 from fastapi import APIRouter, Response
 from fastapi.requests import Request
 from fastapi.responses import HTMLResponse
@@ -9,6 +9,8 @@ from app.exceptions import (
     IncorrectEmailOrPasswordException,
     PasswordMismatchException,
 )
+from app.telegram.dao import TelegramUsersDAO
+from app.telegram.models import TelegramUser
 from app.users.auth import get_password_hash, authenticate_user, create_access_token
 from app.users.dao import UsersDAO
 from app.users.schemas import SUserRegister, SUserAuth, SUserRead
@@ -42,7 +44,19 @@ async def register_user(user_data: SUserRegister) -> dict:
         name=user_data.name, email=user_data.email, hashed_password=hashed_password
     )
 
-    return {"message": "Вы успешно зарегистрированы!"}
+    token = secrets.token_hex(16)
+    tg_user = TelegramUser(email=user_data.email, token=token)
+    await TelegramUsersDAO.add(tg_user)
+
+    verification_message = (
+        f"Перейдите по ссылке в ТГ бот для верификации и нажмите команду 'Старт'"
+        f"Ваш персональный токен для верификации: {token}"
+    )
+    # TODO: Задача в Celery на отправку сообщения с ссылкой и токеном на почту
+
+    return {
+        "message": "Вы успешно зарегистрированы! Проверьте свою почту для подтверждения."
+    }
 
 
 @router.post("/login/")
