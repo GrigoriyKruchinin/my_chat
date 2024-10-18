@@ -21,7 +21,6 @@ templates = Jinja2Templates(directory="app/templates")
 @router.get("/users", response_model=List[SUserRead])
 async def get_users():
     users_all = await UsersDAO.find_all()
-    # Используем генераторное выражение для создания списка
     return [{"id": user.id, "name": user.name} for user in users_all]
 
 
