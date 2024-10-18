@@ -14,6 +14,7 @@ from app.telegram.models import TelegramUser
 from app.users.auth import get_password_hash, authenticate_user, create_access_token
 from app.users.dao import UsersDAO
 from app.users.schemas import SUserRegister, SUserAuth, SUserRead
+from app.celery.tasks import send_email
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -52,7 +53,8 @@ async def register_user(user_data: SUserRegister) -> dict:
         f"Перейдите по ссылке в ТГ бот для верификации и нажмите команду 'Старт'"
         f"Ваш персональный токен для верификации: {token}"
     )
-    # TODO: Задача в Celery на отправку сообщения с ссылкой и токеном на почту
+
+    send_email.delay(user_data.email, "Подтверждение регистрации", verification_message)
 
     return {
         "message": "Вы успешно зарегистрированы! Проверьте свою почту для подтверждения."

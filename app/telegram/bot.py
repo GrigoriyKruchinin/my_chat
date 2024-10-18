@@ -1,21 +1,23 @@
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, F
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 from aiogram.types import Message
 from aiogram.utils.markdown import hbold
 from aiogram.client.bot import DefaultBotProperties
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.fsm.state import State, StatesGroup
+
 from app.config import settings
 from app.telegram.dao import TelegramUsersDAO
 from app.users.dao import UsersDAO
 
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State
+
+storage = MemoryStorage()
+dp = Dispatcher(storage=storage)
 
 
-dp = Dispatcher()
-
-
-class VerificationState(State):
+class VerificationState(StatesGroup):
     waiting_for_token = State()
 
 
@@ -29,7 +31,7 @@ async def command_start_handler(message: Message):
     )
 
 
-@dp.message(commands=["verification"])
+@dp.message(F.text == "/verification")
 async def command_verification_handler(message: Message, state: FSMContext):
     await message.answer("Пожалуйста, введите токен, который вы получили на почте.")
     await state.set_state(VerificationState.waiting_for_token)

@@ -24,8 +24,31 @@ services:
       - .env
     depends_on:
       - db
+      - redis
     ports:
       - "8000:8000"
+    networks:
+      - messaging-network
+
+  redis:
+    image: redis:alpine
+    container_name: my_chat_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - messaging-network
+
+  celery:
+    build: .
+    container_name: my_chat_celery
+    command: celery -A app.celery.celery_app worker --loglevel=info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
     networks:
       - messaging-network
 

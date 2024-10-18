@@ -9,6 +9,13 @@ class Settings(BaseSettings):
 
     TG_TOKEN: str
 
+    CELERY_BROKER_URL: str
+
+    SMTP_SERVER: str
+    SMTP_PORT: str
+    SMTP_USER: str
+    SMTP_PASSWORD: str
+
     class ConfigDict:
         env_file = ".env"
 
