@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     ALGORITHM: str
 
     TG_TOKEN: str
+    TG_URL: str
 
     CELERY_BROKER_URL: str
 

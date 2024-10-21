@@ -32,6 +32,7 @@ async def authenticate_user(email: EmailStr, password: str):
     user = await UsersDAO.find_one_or_none(email=email)
     if (
         not user
+        or not user.is_verified
         or verify_password(
             plain_password=password, hashed_password=user.hashed_password
         )

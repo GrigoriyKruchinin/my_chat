@@ -13,6 +13,7 @@ from app.database import Base
 from app.config import settings
 from app.users.models import User
 from app.chat.models import Message
+from app.telegram.models import TelegramUser
 
 
 config = context.config
