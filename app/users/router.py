@@ -22,30 +22,49 @@ from app.config import settings
 
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
-
 templates = Jinja2Templates(directory="app/templates")
 
 
 @router.get("/users", response_model=List[UserRead])
-@cache(expire=600)
+@cache(expire=600)  # Кэширование результатов запроса на 10 минут
 async def get_users():
+    """
+    Получение списка всех пользователей.
+
+    :return: Список пользователей с их ID и именами.
+    """
     users_all = await UsersDAO.find_all()
     return [{"id": user.id, "name": user.name} for user in users_all]
 
 
 @router.get("/", response_class=HTMLResponse, summary="Страница авторизации")
-async def get_auth_page (request: Request):
+async def get_auth_page(request: Request):
+    """
+    Отображение страницы авторизации.
+
+    :param request: Объект запроса FastAPI.
+    :return: HTML-ответ с формой авторизации.
+    """
     return templates.TemplateResponse("auth.html", {"request": request})
 
 
 @router.post("/register/")
 async def register_user(user_data: UserRegister) -> dict:
+    """
+    Регистрация нового пользователя.
+
+    :param user_data: Данные пользователя для регистрации.
+    :return: Сообщение об успешной регистрации.
+    :raises UserAlreadyExistsException: Если пользователь с таким email уже существует.
+    :raises PasswordMismatchException: Если пароли не совпадают.
+    """
     user = await UsersDAO.find_one_or_none(email=user_data.email)
     if user:
         raise UserAlreadyExistsException
 
     if user_data.password != user_data.password_check:
         raise PasswordMismatchException("Пароли не совпадают")
+
     hashed_password = get_password_hash(user_data.password)
     await UsersDAO.add(
         name=user_data.name, email=user_data.email, hashed_password=hashed_password
@@ -53,6 +72,7 @@ async def register_user(user_data: UserRegister) -> dict:
 
     user = await UsersDAO.find_one_or_none(email=user_data.email)
 
+    # Генерируем токен для верификации
     token = secrets.token_hex(16)
     await TelegramUsersDAO.add(email=user_data.email, token=token, main_user_id=user.id)
 
@@ -71,9 +91,18 @@ async def register_user(user_data: UserRegister) -> dict:
 
 @router.post("/login/")
 async def auth_user(response: Response, user_data: UserAuth):
+    """
+    Авторизация пользователя.
+
+    :param response: Объект ответа FastAPI для установки cookies.
+    :param user_data: Данные пользователя для авторизации.
+    :return: Сообщение об успешной авторизации и токен доступа.
+    :raises NoVerifiOrIncorrectEmailOrPasswordException: Если пользователь не верифицирован или неверная почта/пароль.
+    """
     check = await authenticate_user(email=user_data.email, password=user_data.password)
     if check is None:
         raise NoVerifiOrIncorrectEmailOrPasswordException
+
     access_token = create_access_token({"sub": str(check.id)})
 
     # Сохраняем сессионный токен в Redis
@@ -91,5 +120,11 @@ async def auth_user(response: Response, user_data: UserAuth):
 
 @router.post("/logout/")
 async def logout_user(response: Response):
+    """
+    Выход пользователя из системы.
+
+    :param response: Объект ответа FastAPI для удаления cookies.
+    :return: Сообщение об успешном выходе.
+    """
     response.delete_cookie(key="users_access_token")
     return {"message": "Пользователь успешно вышел из системы"}

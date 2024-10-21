@@ -15,6 +15,13 @@ from app.users.dao import UsersDAO
 
 
 def get_token(request: Request):
+    """
+    Извлекает токен доступа из cookies запроса.
+
+    :param request: Объект запроса FastAPI.
+    :return: JWT токен, если он найден в cookies.
+    :raises TokenNoFoundException: Если токен не найден в cookies.
+    """
     token = request.cookies.get("users_access_token")
     if not token:
         raise TokenNoFoundException
@@ -22,6 +29,15 @@ def get_token(request: Request):
 
 
 async def get_current_user(token: str = Depends(get_token)):
+    """
+    Декодирует JWT токен и возвращает текущего аутентифицированного пользователя.
+
+    :param token: JWT токен, полученный через Depends.
+    :return: Объект пользователя, если аутентификация успешна.
+    :raises NoJwtException: Если токен не удалось декодировать.
+    :raises TokenExpiredException: Если срок действия токена истек или токен не найден в Redis.
+    :raises NoUserIdException: Если идентификатор пользователя отсутствует в payload токена.
+    """
     try:
         auth_data = get_auth_data()
         payload = jwt.decode(
@@ -51,7 +67,5 @@ async def get_current_user(token: str = Depends(get_token)):
 
     user = await UsersDAO.find_one_or_none_by_id(int(user_id))
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
-        )
+        raise NoUserIdException
     return user

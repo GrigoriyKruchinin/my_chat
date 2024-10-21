@@ -17,6 +17,14 @@ async_session_maker = async_sessionmaker(engine, class_=AsyncSession)
 
 
 class Base(AsyncAttrs, DeclarativeBase):
+    """
+    Базовый класс для моделей SQLAlchemy с автоматическим управлением временными метками.
+
+    Атрибуты:
+    - created_at: Дата и время создания записи.
+    - updated_at: Дата и время последнего обновления записи.
+    """
+
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         server_default=func.now(), onupdate=func.now()

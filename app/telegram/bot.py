@@ -17,20 +17,27 @@ from app.telegram.schemas import TelegramUserUpdate
 from app.users.schemas import UserUpdate
 
 
+# Настройка логирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Создание диспетчера с хранилищем состояний в памяти
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 
 
+# Определение состояний для FSM
 class VerificationState(StatesGroup):
     waiting_for_token = State()
 
 
 @dp.message(CommandStart())
 async def command_start_handler(message: Message):
+    """
+    Обрабатывает команду /start. Приветствует пользователя и объясняет функционал бота.
+    """
     logger.info(f"User {message.from_user.id} started the bot.")
+
     await message.answer(
         f"Привет, {hbold(message.from_user.full_name)}! "
         "Этот бот предназначен для напоминания о пропущенных сообщениях из приложения mychat.\n\n"
@@ -41,16 +48,23 @@ async def command_start_handler(message: Message):
 
 @dp.message(F.text == "/verification")
 async def command_verification_handler(message: Message, state: FSMContext):
+    """
+    Обрабатывает команду /verification. Запрашивает токен для верификации.
+    """
     logger.info(f"User {message.from_user.id} started verification.")
     await message.answer("Пожалуйста, введите токен, который вы получили на почте.")
+    # Переход в состояние ожидания токена
     await state.set_state(VerificationState.waiting_for_token)
 
 
 @dp.message(VerificationState.waiting_for_token)
 async def handle_token_input(message: Message, state: FSMContext):
+    """
+    Обрабатывает ввод токена пользователем. Проверяет валидность токена и верифицирует пользователя.
+    """
     token = message.text
     logger.info(f"User {message.from_user.id} entered token: {token}")
-
+    # Поиск пользователя по токену
     tg_user = await TelegramUsersDAO.find_one_or_none(token=token)
 
     if not tg_user:
@@ -61,13 +75,16 @@ async def handle_token_input(message: Message, state: FSMContext):
         await state.clear()
         return
 
+    # Обновляем данные пользователя Telegram
     tg_update_data = TelegramUserUpdate(telegram_id=message.chat.id)
     await TelegramUsersDAO.update(
         {"id": tg_user.id}, **tg_update_data.model_dump(exclude_unset=True)
     )
 
+    # Поиск пользователя mychat в системе по email
     user = await UsersDAO.find_one_or_none(email=tg_user.email)
     if user:
+        # Обновляем данные верификации пользователя
         user_update_data = UserUpdate(is_verified=True)
         await UsersDAO.update(
             {"id": user.id}, **user_update_data.model_dump(exclude_unset=True)
@@ -87,11 +104,17 @@ async def handle_token_input(message: Message, state: FSMContext):
 
 @dp.message()
 async def default_message_handler(message: Message):
+    """
+    Обрабатывает все неподдерживаемые сообщения.
+    """
     logger.info(f"User {message.from_user.id} sent an unsupported message.")
     await message.answer("Этот бот не предназначен для общения.")
 
 
 async def start_telegram_bot():
+    """
+    Запускает Telegram-бота.
+    """
     bot = Bot(
         token=settings.TG_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
