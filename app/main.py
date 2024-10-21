@@ -1,10 +1,12 @@
 import asyncio
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from fastapi.exceptions import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+
 from app.exceptions import TokenExpiredException, TokenNoFoundException
 from app.telegram.bot import start_telegram_bot
 from app.users.router import router as users_router

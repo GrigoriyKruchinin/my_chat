@@ -1,16 +1,17 @@
-from typing import List
 import secrets
+from typing import List
+
 from fastapi import APIRouter, Response
 from fastapi.requests import Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+
 from app.exceptions import (
     UserAlreadyExistsException,
     NoVerifiOrIncorrectEmailOrPasswordException,
     PasswordMismatchException,
 )
 from app.telegram.dao import TelegramUsersDAO
-from app.telegram.models import TelegramUser
 from app.users.auth import get_password_hash, authenticate_user, create_access_token
 from app.users.dao import UsersDAO
 from app.users.schemas import UserRegister, UserAuth, UserRead
@@ -58,9 +59,7 @@ async def register_user(user_data: UserRegister) -> dict:
         f"Ваш персональный токен для верификации: {token}"
     )
 
-    send_email.delay(
-        user_data.email, "Подтверждение регистрации", verification_message
-    )
+    send_email.delay(user_data.email, "Подтверждение регистрации", verification_message)
 
     return {
         "message": "Вы успешно зарегистрированы! Проверьте свою почту для подтверждения."

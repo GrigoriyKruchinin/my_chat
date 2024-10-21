@@ -1,5 +1,6 @@
-from sqlalchemy import func
 from datetime import datetime
+
+from sqlalchemy import func
 from sqlalchemy.orm import Mapped, mapped_column, DeclarativeBase
 from sqlalchemy.ext.asyncio import (
     AsyncAttrs,
@@ -7,7 +8,9 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
     AsyncSession,
 )
+
 from app.config import settings
+
 
 engine = create_async_engine(url=settings.database_url)
 async_session_maker = async_sessionmaker(engine, class_=AsyncSession)

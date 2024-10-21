@@ -1,4 +1,5 @@
 import logging
+
 from aiogram import Bot, Dispatcher, F
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
@@ -14,6 +15,7 @@ from app.telegram.dao import TelegramUsersDAO
 from app.users.dao import UsersDAO
 from app.telegram.schemas import TelegramUserUpdate
 from app.users.schemas import UserUpdate
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
