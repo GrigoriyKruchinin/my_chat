@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     TG_URL: str
 
     CELERY_BROKER_URL: str
+    REDIS_URL: str
 
     SMTP_SERVER: str
     SMTP_PORT: str

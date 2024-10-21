@@ -6,15 +6,20 @@ from fastapi.responses import RedirectResponse
 from fastapi.exceptions import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.redis import RedisBackend
 
 from app.exceptions import TokenExpiredException, TokenNoFoundException
 from app.telegram.bot import start_telegram_bot
 from app.users.router import router as users_router
 from app.chat.router import router as chat_router
+from app.redis.redis_client import redis_client
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    FastAPICache.init(RedisBackend(redis_client), prefix="fastapi-cache")
+
     task = asyncio.create_task(start_telegram_bot())
     yield
     task.cancel()

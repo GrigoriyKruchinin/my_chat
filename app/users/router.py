@@ -5,12 +5,14 @@ from fastapi import APIRouter, Response
 from fastapi.requests import Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from fastapi_cache.decorator import cache
 
 from app.exceptions import (
     UserAlreadyExistsException,
     NoVerifiOrIncorrectEmailOrPasswordException,
     PasswordMismatchException,
 )
+from app.redis.redis_client import redis_client
 from app.telegram.dao import TelegramUsersDAO
 from app.users.auth import get_password_hash, authenticate_user, create_access_token
 from app.users.dao import UsersDAO
@@ -25,13 +27,14 @@ templates = Jinja2Templates(directory="app/templates")
 
 
 @router.get("/users", response_model=List[UserRead])
+@cache(expire=600)
 async def get_users():
     users_all = await UsersDAO.find_all()
     return [{"id": user.id, "name": user.name} for user in users_all]
 
 
 @router.get("/", response_class=HTMLResponse, summary="Страница авторизации")
-async def get_categories(request: Request):
+async def get_auth_page (request: Request):
     return templates.TemplateResponse("auth.html", {"request": request})
 
 
@@ -72,6 +75,11 @@ async def auth_user(response: Response, user_data: UserAuth):
     if check is None:
         raise NoVerifiOrIncorrectEmailOrPasswordException
     access_token = create_access_token({"sub": str(check.id)})
+
+    # Сохраняем сессионный токен в Redis
+    redis_key = f"session:{check.id}"
+    await redis_client.set(redis_key, access_token, ex=3600)
+
     response.set_cookie(key="users_access_token", value=access_token, httponly=True)
     return {
         "ok": True,

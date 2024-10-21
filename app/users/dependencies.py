@@ -10,6 +10,7 @@ from app.exceptions import (
     NoUserIdException,
     TokenNoFoundException,
 )
+from app.redis.redis_client import redis_client
 from app.users.dao import UsersDAO
 
 
@@ -37,6 +38,16 @@ async def get_current_user(token: str = Depends(get_token)):
     user_id: str = payload.get("sub")
     if not user_id:
         raise NoUserIdException
+
+    # Проверка токена в Redis
+    redis_key = f"session:{user_id}"
+    stored_token = await redis_client.get(redis_key)
+
+    if stored_token is None:
+        raise TokenExpiredException("Session expired or not found")
+
+    # Обновление срока действия токена в Redis
+    await redis_client.set(redis_key, token, ex=3600)
 
     user = await UsersDAO.find_one_or_none_by_id(int(user_id))
     if not user:
