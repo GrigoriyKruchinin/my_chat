@@ -25,6 +25,8 @@ services:
     depends_on:
       - db
       - redis
+    ports:
+      - "8000:8000"
     networks:
       - messaging-network
 

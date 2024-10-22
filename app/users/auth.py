@@ -3,6 +3,7 @@ from passlib.context import CryptContext
 from pydantic import EmailStr
 from jose import jwt
 from app.config import get_auth_data
+from app.redis.redis_client import redis_client
 from app.users.dao import UsersDAO
 
 
@@ -66,3 +67,13 @@ async def authenticate_user(email: EmailStr, password: str):
     ):
         return None
     return user
+
+
+async def is_user_online(user_id: int) -> bool:
+    """
+    Проверяет, онлайн ли пользователь.
+
+    :param user_id: ID пользователя.
+    :return: True, если пользователь онлайн, иначе False.
+    """
+    return await redis_client.exists(f"online:{user_id}") == 1

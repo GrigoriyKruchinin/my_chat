@@ -5,8 +5,10 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Request, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from app.celery.tasks import send_telegram_notification
 from app.chat.dao import MessagesDAO
 from app.chat.schemas import MessageRead, MessageCreate
+from app.users.auth import is_user_online
 from app.users.dao import UsersDAO
 from app.users.dependencies import get_current_user
 from app.users.models import User
@@ -34,7 +36,7 @@ active_connections: Dict[int, WebSocket] = {}
 async def notify_user(user_id: int, message: dict):
     """
     Уведомляет пользователя, если он подключен через WebSocket.
-    
+
     :param user_id: ID пользователя
     :param message: Словарь с данными сообщения
     """
@@ -46,8 +48,8 @@ async def notify_user(user_id: int, message: dict):
 @router.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: int):
     """
-    Управляет WebSocket-подключением пользователя. 
-    
+    Управляет WebSocket-подключением пользователя.
+
     При подключении добавляет пользователя в список активных соединений.
     При разрыве связи удаляет пользователя из списка.
     """
@@ -64,16 +66,19 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int):
 async def get_messages(user_id: int, current_user: User = Depends(get_current_user)):
     """
     Получает список сообщений между текущим пользователем и указанным пользователем.
-    
+
     :param user_id: ID другого пользователя
     :param current_user: Текущий пользователь, извлекается через зависимость
     """
-    return (
+    messages = (
         await MessagesDAO.get_messages_between_users(
             user_id_1=user_id, user_id_2=current_user.id
         )
         or []
     )
+    # Сбрасываем флаг уведомления, если сообщения были прочитаны
+    await UsersDAO.set_notification_sent(current_user.id, False)
+    return messages
 
 
 @router.post("/messages", response_model=MessageCreate)
@@ -82,9 +87,9 @@ async def send_message(
 ):
     """
     Отправляет сообщение от текущего пользователя к указанному получателю.
-    
+
     После отправки уведомляет как отправителя, так и получателя о новом сообщении через WebSocket.
-    
+
     :param message: Данные сообщения (содержит получателя и контент)
     :param current_user: Текущий авторизованный пользователь
     """
@@ -104,6 +109,21 @@ async def send_message(
     # Уведомляем как отправителя, так и получателя
     await notify_user(message.recipient_id, message_data)
     await notify_user(current_user.id, message_data)
+
+    # Проверяем, онлайн ли получатель и было ли уже отправлено уведомление в ТГ
+    if not await is_user_online(
+        message.recipient_id
+    ) and not await UsersDAO.is_notification_sent(message.recipient_id):
+        # Отправляем уведомление через Celery
+        send_telegram_notification.apply_async(
+            (
+                message.recipient_id,
+                "У вас новое непрочитанное сообщение в mychat.",
+            ),
+            countdown=60,
+        )
+        # Устанавливаем флаг, что уведомление отправлено
+        await UsersDAO.set_notification_sent(message.recipient_id, True)
 
     return {
         "recipient_id": message.recipient_id,

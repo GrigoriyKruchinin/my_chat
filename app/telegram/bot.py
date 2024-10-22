@@ -21,6 +21,10 @@ from app.users.schemas import UserUpdate
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Создание бота
+bot = Bot(
+    token=settings.TG_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+)
 # Создание диспетчера с хранилищем состояний в памяти
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
@@ -115,8 +119,5 @@ async def start_telegram_bot():
     """
     Запускает Telegram-бота.
     """
-    bot = Bot(
-        token=settings.TG_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML)
-    )
     logger.info("Bot is starting...")
     await dp.start_polling(bot)

@@ -14,8 +14,8 @@ class User(Base):
     name: Mapped[str] = mapped_column(String, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String, nullable=False)
     email: Mapped[str] = mapped_column(String, nullable=False)
-
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    notification_sent: Mapped[bool] = mapped_column(Boolean, default=False)
 
     telegram_user: Mapped["TelegramUser"] = relationship(
         "TelegramUser", back_populates="main_user", uselist=False

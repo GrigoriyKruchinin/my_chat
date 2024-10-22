@@ -1,7 +1,7 @@
 import secrets
 from typing import List
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Depends, Response
 from fastapi.requests import Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -16,6 +16,8 @@ from app.redis.redis_client import redis_client
 from app.telegram.dao import TelegramUsersDAO
 from app.users.auth import get_password_hash, authenticate_user, create_access_token
 from app.users.dao import UsersDAO
+from app.users.dependencies import get_current_user
+from app.users.models import User
 from app.users.schemas import UserRegister, UserAuth, UserRead
 from app.celery.tasks import send_email
 from app.config import settings
@@ -108,6 +110,8 @@ async def auth_user(response: Response, user_data: UserAuth):
     # Сохраняем сессионный токен в Redis
     redis_key = f"session:{check.id}"
     await redis_client.set(redis_key, access_token, ex=3600)
+    # Сохраняем информацию о том, что пользователь онлайн
+    await redis_client.set(f"online:{check.id}", "true", ex=3600)
 
     response.set_cookie(key="users_access_token", value=access_token, httponly=True)
     return {
@@ -119,12 +123,21 @@ async def auth_user(response: Response, user_data: UserAuth):
 
 
 @router.post("/logout/")
-async def logout_user(response: Response):
+async def logout_user(
+    response: Response, current_user: User = Depends(get_current_user)
+):
     """
     Выход пользователя из системы.
 
     :param response: Объект ответа FastAPI для удаления cookies.
     :return: Сообщение об успешном выходе.
     """
+    # Удаляем сессионный токен из Redis
+    redis_key = f"session:{current_user.id}"
+    await redis_client.delete(redis_key)
+    # Удаляем информацию о том, что пользователь онлайн
+    online_key = f"online:{current_user.id}"
+    await redis_client.delete(online_key)
+
     response.delete_cookie(key="users_access_token")
     return {"message": "Пользователь успешно вышел из системы"}
