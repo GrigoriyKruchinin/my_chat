@@ -28,7 +28,7 @@ templates = Jinja2Templates(directory="app/templates")
 
 
 @router.get("/users", response_model=List[UserRead])
-@cache(expire=600)  # Кэширование результатов запроса на 10 минут
+@cache(expire=60)  # Кэширование результатов запроса на 1 минуту
 async def get_users():
     """
     Получение списка всех пользователей.

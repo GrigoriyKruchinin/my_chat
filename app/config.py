@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     - SMTP_PORT: Порт SMTP сервера.
     - SMTP_USER: Пользователь для подключения к SMTP серверу.
     - SMTP_PASSWORD: Пароль для подключения к SMTP серверу.
+    - SHOW_WITH_NGROK: Флаг для запуска приложения с Ngrok
+    - NGROK_AUTH_TOKEN: Токен аутентификации для Ngrok
     """
     database_url: str = ""
 
@@ -33,6 +35,9 @@ class Settings(BaseSettings):
     SMTP_PORT: str
     SMTP_USER: str
     SMTP_PASSWORD: str
+
+    SHOW_WITH_NGROK: bool
+    NGROK_AUTH_TOKEN: str
 
     class ConfigDict:
         env_file = ".env"
